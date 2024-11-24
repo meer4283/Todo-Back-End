@@ -1,0 +1,237 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model AdminUser {
+  admin_user_id  Int      @id @default(autoincrement())
+  name           String
+  email          String   @unique
+  email_verified String   @default("NO")
+  password       String   @db.VarChar(255)
+  is_active      String   @default("YES")
+  last_loggedin  DateTime?
+  created_at     DateTime @default(now())
+  updated_at     DateTime @updatedAt
+
+  @@map("admin_user")
+}
+
+model User {
+  user_id               Int    @id @default(autoincrement())
+  name                  String
+  email                 String @unique
+  phone_number          String
+  country_code          String
+  email_verified        String @default("NO")
+  phone_number_verified String @default("NO")
+  password              String @db.VarChar(255)
+
+  status     String       @default("ACTIVE")
+  Vendor     Vendor?
+  DishRviews DishReview[]
+  orders     Order[]
+  UserWallet UserWallet?
+  UserOtp UserOtp[]
+
+  created_at DateTime @default(now())
+  updated_at DateTime @updatedAt
+
+  @@map("users")
+}
+model UserOtp {
+  id          Int      @id @default(autoincrement()) // Unique identifier for OTP
+  user_id     Int      // Foreign key to User model
+  otp         String   // OTP value
+  is_verified Boolean  @default(false) // Flag to check if OTP is validated
+  expires_at  DateTime // Expiration time of OTP
+  created_at  DateTime @default(now()) // Timestamp when OTP is created
+  updated_at  DateTime @updatedAt // Timestamp for when the OTP is updated
+
+  user        User     @relation(fields: [user_id], references: [user_id]) // Relation to User model
+
+  @@map("user_otp") // Custom table name
+}
+model Category {
+  category_id     Int      @id @default(autoincrement())
+  category_name   String
+  category_image  String?
+  category_banner String?
+  description     String?  @db.LongText()
+  created_at      DateTime @default(now())
+  updated_at      DateTime @updatedAt
+  Dishes          Dish[]
+
+  @@map("category")
+}
+
+model Cuisine {
+  cuisine_id     Int             @id @default(autoincrement())
+  cuisine_name   String
+  cuisine_image  String?
+  cuisine_banner String?
+  created_at     DateTime        @default(now())
+  updated_at     DateTime        @updatedAt
+  VendorCuisines VendorCuisine[]
+
+  @@map("cuisine")
+}
+
+model Vendor {
+  vendor_id         Int              @id @default(autoincrement())
+  user_id           Int              @unique
+  store_name        String
+  store_address     String?  @db.LongText()
+  store_description String?  @db.LongText()
+  brand_name        String
+  store_image       String?
+  tax_info          String?
+  business_type     String
+  created_at       DateTime           @default(now())
+  updated_at       DateTime           @updatedAt
+  User              User             @relation(fields: [user_id], references: [user_id])
+  vendorDocuments   VendorDocument[]
+  Dishes            Dish[]
+  vendorCuisines    VendorCuisine[]
+
+  @@map("vendors")
+}
+
+model VendorDocument {
+  vendor_document_id Int      @id @default(autoincrement())
+  vendor_id          Int
+  document_type      String
+  document           String?  @db.LongText()
+  document_meta      Json? 
+  is_verified        String   @default("NO")
+  is_optional        String   @default("NO")
+  document_status    String?
+  status_reason      String?
+  created_at         DateTime @default(now())
+  updated_at         DateTime @updatedAt
+  Vendor             Vendor   @relation(fields: [vendor_id], references: [vendor_id])
+
+  @@map("vendor_documents")
+}
+
+model Dish {
+  dish_id          Int                @id @default(autoincrement())
+  vendor_id        Int
+  dish_title       String
+  dish_price       Float
+  category_id      Int
+  dish_description String?  @db.LongText()
+  dish_meta        Json?
+  dish_image       String
+  created_at       DateTime           @default(now())
+  updated_at       DateTime           @updatedAt
+  Vendor           Vendor             @relation(fields: [vendor_id], references: [vendor_id])
+  Category         Category           @relation(fields: [category_id], references: [category_id])
+  DishAvailability DishAvailability[]
+  DishReviews      DishReview[]
+  OrderItems       OrderItem[]
+
+  @@map("dish")
+}
+
+model DishAvailability {
+  dish_availability_id Int      @id @default(autoincrement())
+  dish_id              Int
+  day                  String
+  is_available         String   @default("YES")
+  time_from            String?
+  time_to              String?
+  created_at           DateTime @default(now())
+  updated_at           DateTime @updatedAt
+  Dish                 Dish     @relation(fields: [dish_id], references: [dish_id])
+
+  @@map("dish_availability")
+}
+
+model UserWallet {
+  user_wallet_id Int      @id @default(autoincrement())
+  user_id        Int      @unique
+  amount         Float    @default(0.0)
+  created_at     DateTime @default(now())
+  updated_at     DateTime @updatedAt
+  User           User     @relation(fields: [user_id], references: [user_id])
+
+  @@map("user_wallet")
+}
+
+model VendorMembership {
+  vendor_membership_id Int      @id @default(autoincrement())
+  price                Float
+  plan_period          String
+  plan_title           String
+  is_featured          String   @default("NO")
+  feaures_meta         Json?
+  created_at           DateTime @default(now())
+  updated_at           DateTime @updatedAt
+
+  @@map("vendor_membership")
+}
+
+model DishReview {
+  dish_review_id Int      @id @default(autoincrement())
+  user_id        Int
+  dish_id        Int
+  rating         Int
+  review         String
+  created_at     DateTime @default(now())
+  updated_at     DateTime @updatedAt
+  user           User     @relation(fields: [user_id], references: [user_id])
+  dish           Dish     @relation(fields: [dish_id], references: [dish_id])
+
+  @@map("dish_review")
+}
+
+model VendorCuisine {
+  vendor_cuisine_id Int     @id @default(autoincrement())
+  vendor_id         Int
+  cuisine_id        Int
+  Vendor            Vendor  @relation(fields: [vendor_id], references: [vendor_id])
+  Cuisine           Cuisine @relation(fields: [cuisine_id], references: [cuisine_id])
+
+  @@map("vendor_cuisine")
+}
+
+model Order {
+  order_id     Int         @id @default(autoincrement())
+  user_id      Int
+  sub_total    Float
+  delivery_fee Float
+  order_tip    Float?      @default(0.00)
+  total_amount Float
+  paid_with    String
+  order_status String
+  created_at   DateTime    @default(now())
+  updated_at   DateTime    @updatedAt
+  User         User        @relation(fields: [user_id], references: [user_id])
+  OrderItems  OrderItem[]
+
+  @@map("order")
+}
+
+model OrderItem {
+  order_item_id Int      @id @default(autoincrement())
+  order_id      Int
+  dish_id       Int
+  qty           Int
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+  order         Order    @relation(fields: [order_id], references: [order_id])
+  dish          Dish     @relation(fields: [dish_id], references: [dish_id])
+
+  @@map("order_item")
+}
